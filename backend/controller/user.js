@@ -1,5 +1,5 @@
 
-const { findeByAddress, create, authenticateUser } = require('../services/user');
+const { findeByAddress, create, authenticateUser, userRefreshToken } = require('../services/user');
 
 const fetchUser = async(req, res, next)=>{
     try{
@@ -24,6 +24,16 @@ const authUser = async(req, res, next)=>{
         const accessToken = await authenticateUser(req.body);
         res.status(200).send({ message: 'Data fethed', error: null, accessToken });
     }catch(err){
+        console.log('jwt is not defined++++', err);
+        // next(err);
+    }
+}
+
+const refreshTokenUser = async(req, res, next) => {
+    try{
+        const accessToken = await userRefreshToken(req.body);
+        res.status(200).send({ message: 'Data fethed', error: null, accessToken });
+    }catch(err){
         next(err);
     }
 }
@@ -31,5 +41,6 @@ const authUser = async(req, res, next)=>{
 module.exports = {
     fetchUser,
     createUser,
-    authUser
+    authUser,
+    refreshTokenUser
 }

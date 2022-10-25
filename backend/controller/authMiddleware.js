@@ -1,5 +1,7 @@
 const jwtSecretKey = process.env.JWT_SECRET;
 const jwt = require('jsonwebtoken');
+const { findeByAddress } = require('../services/user');
+
 
 const validateToken = async (req, res, next) => {
 
@@ -10,18 +12,16 @@ const validateToken = async (req, res, next) => {
             const token = req.headers.authorization.split(' ')[1];
             const options = { expiresIn: 120 };
             let verifyResult = jwt.verify(token, jwtSecretKey);
-            req._id = verifyResult.userId;
-            req.userRole = verifyResult.userRole;
+            req.publicAddress = verifyResult.publicAddress;
             
-            if (verifyResult.userId) {
-                let dbRes = await _db.get().collection(userCollection).findOne({ _id: ObjectId(verifyResult.userId) });
-
-                if (dbRes) {
+            if (verifyResult.publicAddress) {
+                const user = await findeByAddress(req.query.publicAddress);
+                if (user) {
                     next();
 
                 } else {
                     res.status(401).send({ message: 'Authentication error.user not exist in db', error: null, data: null });
-
+                    
                 }
             } else {
                 res.status(401).send({ message: 'Authentication error.', error: null, data: null });

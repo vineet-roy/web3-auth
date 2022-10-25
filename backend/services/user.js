@@ -21,11 +21,11 @@ const authenticateUser = async (userData) => {
   const user = await userModel.findOne({ where: { publicAddress } });
 
   if (!user) {
-    return `User with publicAddress ${publicAddress} is not found in database`;
+    throw new Error(`User with publicAddress ${publicAddress} is not found in database`);
   }
 
   if (!(user instanceof userModel)) {
-    throw new Error('User is not defined in "Verify digital signature".');
+    throw new Error('User is not defined in "Verify digital signature');
   }
 
   const msg = `signing one-time nonce: ${user.nonce}`;
@@ -40,22 +40,58 @@ const authenticateUser = async (userData) => {
   });
 
   if (address.toLowerCase() !== publicAddress.toLowerCase()) {
-    return "Signature verification failed";
+    throw new Error('Signature verification failed');
   }
 
   user.nonce = Math.floor(Math.random() * 10000);
+  user.generateRefreshToken();
+  // user.refreshToken = await jwt.sign(
+  //   { payload: { publicAddress } },
+  //   process.env.SECRET,
+  //   { algorithm: "HS256" } // expiresIn: "300000"
+  // );
   user.save();
 
   const token = await jwt.sign(
     { payload: { publicAddress } },
     process.env.SECRET,
-    { algorithm: "HS256" }
+    { algorithm: "HS256", expiresIn: "300000" } // expiresIn: "300000"
   );
   return token;
 };
+
+const userRefreshToken = async (requestedData) => {
+  const { refreshToken } = requestedData;
+
+  if (!refreshToken) {
+      throw new Error('No refresh token provided');
+  }
+
+  const { payload } = await jwt.verify(refreshToken, process.env.SECRET);
+  const publicAddress = payload.publicAddress;
+  const user = await userModel.findOne({ where: { publicAddress } });
+
+  if (!user) {
+    throw new Error('User not found');
+  
+  }
+
+  user.generateRefreshToken();
+  user.save();
+
+  const token = await jwt.sign(
+    { payload: { publicAddress } },
+    process.env.SECRET,
+    { algorithm: "HS256", expiresIn: "5m" }
+  );
+
+  return token;
+
+}
 
 module.exports = {
   findeByAddress,
   authenticateUser,
   create,
+  userRefreshToken
 };
